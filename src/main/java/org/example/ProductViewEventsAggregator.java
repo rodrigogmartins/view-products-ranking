@@ -16,23 +16,26 @@ import org.example.entities.ProductEventAggregated;
 
 import java.util.Properties;
 
-public class ProductsEventsRankingAggregator {
+public class ProductViewEventsAggregator {
 
-    private final String sourceTopic;
-    private final String outputTopic;
     private final String APPLICATION_ID;
     private final String CLIENT_ID;
     private final ObjectMapper mapper;
+    private final String kafkaServer;
+    private final String sourceTopic;
+    private final String outputTopic;
 
-    public ProductsEventsRankingAggregator(
+    public ProductViewEventsAggregator(
+        String kafkaServer,
         String sourceTopic,
         String outputTopic
     ) {
-        this.sourceTopic = sourceTopic;
-        this.outputTopic = outputTopic;
         this.APPLICATION_ID = "product-view-events-aggregation-app";
         this.CLIENT_ID = "product-view-events-aggregation-client";
         this.mapper = new ObjectMapper();
+        this.kafkaServer = kafkaServer;
+        this.sourceTopic = sourceTopic;
+        this.outputTopic = outputTopic;
     }
 
     public void aggregate() {
@@ -43,14 +46,8 @@ public class ProductsEventsRankingAggregator {
             source
                 .map((key, value) -> {
                     JsonNode node = this.serializeMessage(value);
-
-                    if (node == null) {
-                        return null;
-                    }
-
                     return new KeyValue<>(node.get("productId").asText(), "view");
                 })
-                .filter((key, value) -> value != null)
                 .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
                 .count(Materialized.as("product-view-events-aggregation-store"))
                 .toStream()
@@ -86,12 +83,11 @@ public class ProductsEventsRankingAggregator {
 
     private Properties getProps() {
         Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_ID);
-        props.put(StreamsConfig.CLIENT_ID_CONFIG, CLIENT_ID);
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, this.APPLICATION_ID);
+        props.put(StreamsConfig.CLIENT_ID_CONFIG, this.CLIENT_ID);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.kafkaServer);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-
         return props;
     }
 }

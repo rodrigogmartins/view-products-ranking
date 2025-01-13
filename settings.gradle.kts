@@ -1,2 +1,1 @@
-rootProject.name = "recommendations"
-
+rootProject.name = "view-products-ranking"
